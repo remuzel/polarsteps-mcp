@@ -1,25 +1,24 @@
 """
 Polarsteps MCP Server
 
-A Model Context Protocol server that provides tools and resources for 
+A Model Context Protocol server that provides tools and resources for
 interacting with the Polarsteps API.
 """
 
 import logging
 import sys
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, Optional
 
 from mcp.server import Server
 from mcp.types import (
     CallToolRequest,
     CallToolResult,
-    ReadResourceRequest,
-    ReadResourceResult,
     ListResourcesRequest,
     ListResourcesResult,
     ListToolsRequest,
     ListToolsResult,
+    ReadResourceRequest,
+    ReadResourceResult,
     Resource,
     TextContent,
     Tool,
@@ -39,9 +38,9 @@ except ImportError as e:
 
 class PolarstepsMCPSettings(BaseSettings):
     """Settings for the Polarsteps MCP server"""
-    
+
     model_config = {"env_prefix": "POLARSTEPS_"}
-    
+
     remember_token: Optional[str] = Field(
         default=None,
         description="Polarsteps remember token for authentication"
@@ -54,25 +53,25 @@ class PolarstepsMCPSettings(BaseSettings):
 
 class PolarstepsMCPServer:
     """MCP server for Polarsteps API"""
-    
+
     def __init__(self, settings: Optional[PolarstepsMCPSettings] = None):
         self.settings = settings or PolarstepsMCPSettings()
         self.server = Server("polarsteps-mcp")
         self._client: Optional[PolarstepsClient] = None
-        
+
         # Register handlers
         self.server.list_tools = self.list_tools
         self.server.call_tool = self.call_tool
         self.server.list_resources = self.list_resources
         self.server.read_resource = self.read_resource
-        
+
         # Setup logging
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         self.logger = logging.getLogger(__name__)
-    
+
     @property
     def client(self) -> PolarstepsClient:
         """Get or create the Polarsteps client"""
@@ -82,15 +81,15 @@ class PolarstepsMCPServer:
                     "Remember token is required. Set POLARSTEPS_REMEMBER_TOKEN "
                     "environment variable or pass it during initialization."
                 )
-            
+
             config = PolarstepsConfig(
                 remember_token=self.settings.remember_token,
                 base_url=self.settings.base_url
             )
             self._client = PolarstepsClient(config=config)
-        
+
         return self._client
-    
+
     async def list_tools(self, request: ListToolsRequest) -> ListToolsResult:
         """List available tools"""
         tools = [
@@ -155,30 +154,29 @@ class PolarstepsMCPServer:
                 }
             )
         ]
-        
+
         return ListToolsResult(tools=tools)
-    
+
     async def call_tool(self, request: CallToolRequest) -> CallToolResult:
         """Handle tool calls"""
         try:
             if request.params.name == "get_trip":
                 return await self._get_trip(request.params.arguments)
-            elif request.params.name == "get_user":
+            if request.params.name == "get_user":
                 return await self._get_user(request.params.arguments)
-            elif request.params.name == "get_user_trips":
+            if request.params.name == "get_user_trips":
                 return await self._get_user_trips(request.params.arguments)
-            elif request.params.name == "search_trips":
+            if request.params.name == "search_trips":
                 return await self._search_trips(request.params.arguments)
-            else:
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=f"Unknown tool: {request.params.name}"
-                        )
-                    ],
-                    isError=True
-                )
+            return CallToolResult(
+                content=[
+                    TextContent(
+                        type="text",
+                        text=f"Unknown tool: {request.params.name}"
+                    )
+                ],
+                isError=True
+            )
         except Exception as e:
             self.logger.error(f"Error calling tool {request.params.name}: {e}")
             return CallToolResult(
@@ -190,7 +188,7 @@ class PolarstepsMCPServer:
                 ],
                 isError=True
             )
-    
+
     async def _get_trip(self, arguments: Dict[str, Any]) -> CallToolResult:
         """Get trip information"""
         trip_id = arguments.get("trip_id")
@@ -199,10 +197,10 @@ class PolarstepsMCPServer:
                 content=[TextContent(type="text", text="trip_id is required")],
                 isError=True
             )
-        
+
         try:
             response = self.client.get_trip(str(trip_id))
-            
+
             # Format the response for better readability
             trip_info = {
                 "id": response.trip_id,
@@ -223,7 +221,7 @@ class PolarstepsMCPServer:
                 "user": response.user,
                 "steps_count": len(response.all_steps or [])
             }
-            
+
             formatted_text = f"""Trip Information:
 - ID: {trip_info['id']}
 - Name: {trip_info['name']}
@@ -237,17 +235,17 @@ class PolarstepsMCPServer:
 - Timezone: {trip_info['timezone_id']}
 - User ID: {trip_info['user_id']}
 - Steps Count: {trip_info['steps_count']}"""
-            
+
             return CallToolResult(
                 content=[TextContent(type="text", text=formatted_text)]
             )
-            
+
         except Exception as e:
             return CallToolResult(
                 content=[TextContent(type="text", text=f"Failed to get trip: {str(e)}")],
                 isError=True
             )
-    
+
     async def _get_user(self, arguments: Dict[str, Any]) -> CallToolResult:
         """Get user information"""
         username = arguments.get("username")
@@ -256,10 +254,10 @@ class PolarstepsMCPServer:
                 content=[TextContent(type="text", text="username is required")],
                 isError=True
             )
-        
+
         try:
             response = self.client.get_user_by_username(str(username))
-            
+
             user_info = {
                 "id": response.user_id,
                 "username": response.username,
@@ -278,7 +276,7 @@ class PolarstepsMCPServer:
                 "followers_count": len(response.followers or []),
                 "followees_count": len(response.followees or []),
             }
-            
+
             formatted_text = f"""User Information:
 - ID: {user_info['id']}
 - Username: {user_info['username']}
@@ -292,17 +290,17 @@ class PolarstepsMCPServer:
 - Followers: {user_info['followers_count']}
 - Following: {user_info['followees_count']}
 - Creation Date: {user_info['creation_date']}"""
-            
+
             return CallToolResult(
                 content=[TextContent(type="text", text=formatted_text)]
             )
-            
+
         except Exception as e:
             return CallToolResult(
                 content=[TextContent(type="text", text=f"Failed to get user: {str(e)}")],
                 isError=True
             )
-    
+
     async def _get_user_trips(self, arguments: Dict[str, Any]) -> CallToolResult:
         """Get all trips for a user"""
         username = arguments.get("username")
@@ -311,16 +309,16 @@ class PolarstepsMCPServer:
                 content=[TextContent(type="text", text="username is required")],
                 isError=True
             )
-        
+
         try:
             response = self.client.get_user_by_username(str(username))
             trips = response.alltrips or []
-            
+
             if not trips:
                 return CallToolResult(
                     content=[TextContent(type="text", text=f"No trips found for user {username}")]
                 )
-            
+
             formatted_text = f"Trips for user {username}:\n\n"
             for i, trip in enumerate(trips, 1):
                 formatted_text += f"{i}. {trip.get('name', 'Unnamed Trip')}\n"
@@ -329,17 +327,17 @@ class PolarstepsMCPServer:
                 formatted_text += f"   - Distance: {trip.get('total_km', 0)} km\n"
                 formatted_text += f"   - Steps: {trip.get('step_count', 0)}\n"
                 formatted_text += f"   - Views: {trip.get('views', 0)}\n\n"
-            
+
             return CallToolResult(
                 content=[TextContent(type="text", text=formatted_text)]
             )
-            
+
         except Exception as e:
             return CallToolResult(
                 content=[TextContent(type="text", text=f"Failed to get user trips: {str(e)}")],
                 isError=True
             )
-    
+
     async def _search_trips(self, arguments: Dict[str, Any]) -> CallToolResult:
         """Search for trips (placeholder implementation)"""
         query = arguments.get("query")
@@ -348,17 +346,17 @@ class PolarstepsMCPServer:
                 content=[TextContent(type="text", text="query is required")],
                 isError=True
             )
-        
+
         # This is a placeholder implementation
         # In a real implementation, you would need to add search functionality to the API
         return CallToolResult(
             content=[TextContent(
-                type="text", 
+                type="text",
                 text=f"Search functionality for '{query}' is not yet implemented in the base API. "
                      "You can search for specific users and browse their trips instead."
             )]
         )
-    
+
     async def list_resources(self, request: ListResourcesRequest) -> ListResourcesResult:
         """List available resources"""
         resources = [
@@ -375,9 +373,9 @@ class PolarstepsMCPServer:
                 mimeType="text/plain"
             )
         ]
-        
+
         return ListResourcesResult(resources=resources)
-    
+
     async def read_resource(self, request: ReadResourceRequest) -> ReadResourceResult:
         """Get a specific resource"""
         if request.uri == "polarsteps://config":
@@ -394,8 +392,8 @@ class PolarstepsMCPServer:
                     )
                 ]
             )
-        
-        elif request.uri == "polarsteps://help":
+
+        if request.uri == "polarsteps://help":
             help_text = """Polarsteps MCP Server Help
 
 Available Tools:
@@ -421,10 +419,9 @@ Examples:
                     )
                 ]
             )
-        
-        else:
-            raise ValueError(f"Unknown resource: {request.uri}")
-    
+
+        raise ValueError(f"Unknown resource: {request.uri}")
+
     async def run(self, read_stream, write_stream, initialization_options=None):
         """Run the MCP server with the provided streams"""
         try:
@@ -435,7 +432,7 @@ Examples:
                 self.logger.info("Successfully connected to Polarsteps API")
             else:
                 self.logger.warning("No remember token provided. Tools will fail until token is set.")
-            
+
             # Run the server with streams
             await self.server.run(read_stream, write_stream, initialization_options or {})
         except Exception as e:
@@ -445,12 +442,11 @@ Examples:
 
 async def main():
     """Main entry point for command-line usage"""
-    import sys
     from mcp.server.stdio import stdio_server
-    
+
     settings = PolarstepsMCPSettings()
     server = PolarstepsMCPServer(settings)
-    
+
     # Run with stdio streams
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream)

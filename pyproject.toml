@@ -9,7 +9,13 @@ dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "httpx>=0.24.0",
-    "polarsteps-api @ file:///home/remuzel/workplace/polarstep/polarsteps_api",
+    "polarsteps-api @ file:///home/remuzel/workplace/polarstep/polarsteps-api",
+    "ruff>=0.12.0",
+    "mypy>=1.16.1",
+    "pre-commit>=4.2.0",
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "pytest>=8.4.1",
 ]
 authors = [
     {name = "Remuzel", email = "remikaanuzel@gmail.com"}
