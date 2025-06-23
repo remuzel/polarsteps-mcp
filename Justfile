@@ -23,7 +23,7 @@ install-dev:
 # Lint code
 lint:
     @echo "🔍 Linting code..."
-    uv run ruff check --fix --unsafe-fixes polarsteps_mcp tests scripts
+    uv run ruff check --fix --unsafe-fixes polarsteps_mcp tests examples
 
 # Type check
 typecheck:
@@ -34,6 +34,16 @@ typecheck:
 test:
     @echo "🧪 Running tests..."
     uv run pytest tests/ -v
+
+# Test MCP server with inspector
+test-mcp:
+    @echo "🔍 Testing MCP server with inspector..."
+    npx @modelcontextprotocol/inspector uv run polarsteps-mcp
+
+# Run the MCP server directly
+run:
+    @echo "🚀 Running MCP server..."
+    uv run polarsteps-mcp
 
 # Clean up generated files
 clean:

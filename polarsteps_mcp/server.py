@@ -5,9 +5,7 @@ A Model Context Protocol server that provides tools and resources for
 interacting with the Polarsteps API.
 """
 
-import logging
-import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from mcp.server import Server
 from mcp.types import (
@@ -15,7 +13,6 @@ from mcp.types import (
     CallToolResult,
     ListResourcesRequest,
     ListResourcesResult,
-    ListToolsRequest,
     ListToolsResult,
     ReadResourceRequest,
     ReadResourceResult,
@@ -23,41 +20,17 @@ from mcp.types import (
     TextContent,
     Tool,
 )
-from pydantic import AnyUrl, Field
-from pydantic_settings import BaseSettings
-
-try:
-    from polarsteps_api.api.polarsteps import PolarstepsClient
-    from polarsteps_api.config import PolarstepsConfig
-    from polarsteps_api.models.responses import TripResponse, UserResponse
-except ImportError as e:
-    logging.error(f"Failed to import polarsteps_api: {e}")
-    logging.error("Make sure polarsteps_api is installed or in the Python path")
-    sys.exit(1)
-
-
-class PolarstepsMCPSettings(BaseSettings):
-    """Settings for the Polarsteps MCP server"""
-
-    model_config = {"env_prefix": "POLARSTEPS_"}
-
-    remember_token: Optional[str] = Field(
-        default=None,
-        description="Polarsteps remember token for authentication"
-    )
-    base_url: str = Field(
-        default="https://www.polarsteps.com",
-        description="Base URL for the Polarsteps API"
-    )
+from polarsteps_api.api.polarsteps import PolarstepsClient
+from polarsteps_api.config import PolarstepsConfig
+from pydantic import AnyUrl
 
 
 class PolarstepsMCPServer:
     """MCP server for Polarsteps API"""
 
-    def __init__(self, settings: Optional[PolarstepsMCPSettings] = None):
-        self.settings = settings or PolarstepsMCPSettings()
+    def __init__(self):
         self.server = Server("polarsteps-mcp")
-        self._client: Optional[PolarstepsClient] = None
+        self.client = PolarstepsClient(config=PolarstepsConfig())
 
         # Register handlers
         self.server.list_tools = self.list_tools
@@ -65,32 +38,7 @@ class PolarstepsMCPServer:
         self.server.list_resources = self.list_resources
         self.server.read_resource = self.read_resource
 
-        # Setup logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        self.logger = logging.getLogger(__name__)
-
-    @property
-    def client(self) -> PolarstepsClient:
-        """Get or create the Polarsteps client"""
-        if self._client is None:
-            if not self.settings.remember_token:
-                raise ValueError(
-                    "Remember token is required. Set POLARSTEPS_REMEMBER_TOKEN "
-                    "environment variable or pass it during initialization."
-                )
-
-            config = PolarstepsConfig(
-                remember_token=self.settings.remember_token,
-                base_url=self.settings.base_url
-            )
-            self._client = PolarstepsClient(config=config)
-
-        return self._client
-
-    async def list_tools(self, request: ListToolsRequest) -> ListToolsResult:
+    async def list_tools(self) -> ListToolsResult:
         """List available tools"""
         tools = [
             Tool(
@@ -159,293 +107,136 @@ class PolarstepsMCPServer:
 
     async def call_tool(self, request: CallToolRequest) -> CallToolResult:
         """Handle tool calls"""
-        try:
-            if request.params.name == "get_trip":
-                return await self._get_trip(request.params.arguments)
-            if request.params.name == "get_user":
-                return await self._get_user(request.params.arguments)
-            if request.params.name == "get_user_trips":
-                return await self._get_user_trips(request.params.arguments)
-            if request.params.name == "search_trips":
-                return await self._search_trips(request.params.arguments)
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text=f"Unknown tool: {request.params.name}"
-                    )
-                ],
-                isError=True
-            )
-        except Exception as e:
-            self.logger.error(f"Error calling tool {request.params.name}: {e}")
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text=f"Error: {str(e)}"
-                    )
-                ],
-                isError=True
-            )
+        name = request.params.name
+        args = request.params.arguments or {}
 
-    async def _get_trip(self, arguments: Dict[str, Any]) -> CallToolResult:
+        handlers = {
+            "get_trip": self._get_trip,
+            "get_user": self._get_user,
+            "get_user_trips": self._get_user_trips,
+            "search_trips": self._search_trips
+        }
+
+        handler = handlers.get(name)
+        if not handler:
+            return self._error(f"Unknown tool: {name}")
+
+        try:
+            return await handler(args)
+        except Exception as e:
+            return self._error(f"Error: {str(e)}")
+
+    async def _get_trip(self, args: Dict[str, Any]) -> CallToolResult:
         """Get trip information"""
-        trip_id = arguments.get("trip_id")
+        trip_id = args.get("trip_id")
         if not trip_id:
-            return CallToolResult(
-                content=[TextContent(type="text", text="trip_id is required")],
-                isError=True
-            )
+            return self._error("trip_id is required")
 
-        try:
-            response = self.client.get_trip(str(trip_id))
+        response = self.client.get_trip(str(trip_id))
+        if response.is_error or not response.trip:
+            return self._error("Trip not found")
 
-            # Format the response for better readability
-            trip_info = {
-                "id": response.trip_id,
-                "uuid": response.trip_uuid,
-                "name": response.trip_name,
-                "display_name": response.display_name,
-                "slug": response.slug,
-                "summary": response.summary,
-                "start_date": response.start_date,
-                "end_date": response.end_date,
-                "total_km": response.total_km,
-                "step_count": response.step_count,
-                "views": response.views,
-                "visibility": response.visibility,
-                "timezone_id": response.timezone_id,
-                "cover_photo_path": response.cover_photo_path,
-                "user_id": response.user_id,
-                "user": response.user,
-                "steps_count": len(response.all_steps or [])
-            }
+        trip = response.trip
+        text = f"""Trip: {trip.name}
+ID: {trip.id}
+Summary: {trip.summary}
+Distance: {trip.total_km} km
+Steps: {trip.step_count}
+Views: {trip.views}
+Dates: {trip.start_date} to {trip.end_date}"""
 
-            formatted_text = f"""Trip Information:
-- ID: {trip_info['id']}
-- Name: {trip_info['name']}
-- Display Name: {trip_info['display_name']}
-- Summary: {trip_info['summary']}
-- Total Distance: {trip_info['total_km']} km
-- Steps: {trip_info['step_count']}
-- Views: {trip_info['views']}
-- Start Date: {trip_info['start_date']}
-- End Date: {trip_info['end_date']}
-- Timezone: {trip_info['timezone_id']}
-- User ID: {trip_info['user_id']}
-- Steps Count: {trip_info['steps_count']}"""
+        return self._success(text)
 
-            return CallToolResult(
-                content=[TextContent(type="text", text=formatted_text)]
-            )
-
-        except Exception as e:
-            return CallToolResult(
-                content=[TextContent(type="text", text=f"Failed to get trip: {str(e)}")],
-                isError=True
-            )
-
-    async def _get_user(self, arguments: Dict[str, Any]) -> CallToolResult:
+    async def _get_user(self, args: Dict[str, Any]) -> CallToolResult:
         """Get user information"""
-        username = arguments.get("username")
+        username = args.get("username")
         if not username:
-            return CallToolResult(
-                content=[TextContent(type="text", text="username is required")],
-                isError=True
-            )
+            return self._error("username is required")
 
-        try:
-            response = self.client.get_user_by_username(str(username))
+        response = self.client.get_user_by_username(str(username))
+        if response.is_error or not response.user:
+            return self._error("User not found")
 
-            user_info = {
-                "id": response.user_id,
-                "username": response.username,
-                "uuid": response.uuid,
-                "first_name": response.first_name,
-                "last_name": response.last_name,
-                "email": response.email,
-                "description": response.description,
-                "profile_image_path": response.profile_image_path,
-                "living_location_name": response.living_location_name,
-                "locale": response.locale,
-                "visibility": response.visibility,
-                "creation_date": response.creation_date,
-                "country_count": response.country_count,
-                "trips_count": len(response.alltrips or []),
-                "followers_count": len(response.followers or []),
-                "followees_count": len(response.followees or []),
-            }
+        user = response.user
+        trips_count = len(user.alltrips or [])
+        followers_count = len(user.followers or [])
 
-            formatted_text = f"""User Information:
-- ID: {user_info['id']}
-- Username: {user_info['username']}
-- Name: {user_info['first_name']} {user_info['last_name']}
-- Email: {user_info['email']}
-- Description: {user_info['description']}
-- Location: {user_info['living_location_name']}
-- Locale: {user_info['locale']}
-- Countries Visited: {user_info['country_count']}
-- Total Trips: {user_info['trips_count']}
-- Followers: {user_info['followers_count']}
-- Following: {user_info['followees_count']}
-- Creation Date: {user_info['creation_date']}"""
+        text = f"""User: {user.username}
+Name: {user.first_name} {user.last_name}
+Location: {user.living_location_name}
+Countries: {user.country_count}
+Trips: {trips_count}
+Followers: {followers_count}"""
 
-            return CallToolResult(
-                content=[TextContent(type="text", text=formatted_text)]
-            )
+        return self._success(text)
 
-        except Exception as e:
-            return CallToolResult(
-                content=[TextContent(type="text", text=f"Failed to get user: {str(e)}")],
-                isError=True
-            )
-
-    async def _get_user_trips(self, arguments: Dict[str, Any]) -> CallToolResult:
+    async def _get_user_trips(self, args: Dict[str, Any]) -> CallToolResult:
         """Get all trips for a user"""
-        username = arguments.get("username")
+        username = args.get("username")
         if not username:
-            return CallToolResult(
-                content=[TextContent(type="text", text="username is required")],
-                isError=True
-            )
+            return self._error("username is required")
 
-        try:
-            response = self.client.get_user_by_username(str(username))
-            trips = response.alltrips or []
+        response = self.client.get_user_by_username(str(username))
+        if response.is_error or not response.user:
+            return self._error("User not found")
 
-            if not trips:
-                return CallToolResult(
-                    content=[TextContent(type="text", text=f"No trips found for user {username}")]
-                )
+        trips = response.user.alltrips or []
+        if not trips:
+            return self._success(f"No trips found for {username}")
 
-            formatted_text = f"Trips for user {username}:\n\n"
-            for i, trip in enumerate(trips, 1):
-                formatted_text += f"{i}. {trip.get('name', 'Unnamed Trip')}\n"
-                formatted_text += f"   - ID: {trip.get('id')}\n"
-                formatted_text += f"   - Summary: {trip.get('summary', 'No summary')}\n"
-                formatted_text += f"   - Distance: {trip.get('total_km', 0)} km\n"
-                formatted_text += f"   - Steps: {trip.get('step_count', 0)}\n"
-                formatted_text += f"   - Views: {trip.get('views', 0)}\n\n"
+        text = f"Trips for {username}:\n"
+        for i, trip in enumerate(trips, 1):
+            name = trip.name or "Unnamed Trip"
+            text += f"{i}. {name} ({trip.total_km or 0} km, {trip.step_count or 0} steps)\n"
 
-            return CallToolResult(
-                content=[TextContent(type="text", text=formatted_text)]
-            )
+        return self._success(text)
 
-        except Exception as e:
-            return CallToolResult(
-                content=[TextContent(type="text", text=f"Failed to get user trips: {str(e)}")],
-                isError=True
-            )
-
-    async def _search_trips(self, arguments: Dict[str, Any]) -> CallToolResult:
+    async def _search_trips(self, args: Dict[str, Any]) -> CallToolResult:
         """Search for trips (placeholder implementation)"""
-        query = arguments.get("query")
+        query = args.get("query")
         if not query:
-            return CallToolResult(
-                content=[TextContent(type="text", text="query is required")],
-                isError=True
-            )
+            return self._error("query is required")
 
-        # This is a placeholder implementation
-        # In a real implementation, you would need to add search functionality to the API
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"Search functionality for '{query}' is not yet implemented in the base API. "
-                     "You can search for specific users and browse their trips instead."
-            )]
-        )
+        return self._success(f"Search for '{query}' not implemented. Use get_user_trips instead.")
 
     async def list_resources(self, request: ListResourcesRequest) -> ListResourcesResult:
         """List available resources"""
-        resources = [
-            Resource(
-                uri=AnyUrl("polarsteps://config"),
-                name="Polarsteps Configuration",
-                description="Current configuration settings for the Polarsteps MCP server",
-                mimeType="application/json"
-            ),
+        return ListResourcesResult(resources=[
             Resource(
                 uri=AnyUrl("polarsteps://help"),
                 name="Polarsteps Help",
-                description="Help documentation for using the Polarsteps MCP server",
+                description="Help documentation",
                 mimeType="text/plain"
             )
-        ]
-
-        return ListResourcesResult(resources=resources)
+        ])
 
     async def read_resource(self, request: ReadResourceRequest) -> ReadResourceResult:
         """Get a specific resource"""
-        if request.uri == "polarsteps://config":
-            config_info = {
-                "base_url": self.settings.base_url,
-                "has_token": bool(self.settings.remember_token),
-                "version": "0.1.0"
-            }
-            return ReadResourceResult(
-                contents=[
-                    TextContent(
-                        type="text",
-                        text=str(config_info)
-                    )
-                ]
-            )
+        if request.method == "polarsteps://help":
+            text = """Tools: get_trip, get_user, get_user_trips, search_trips
+Setup: Set POLARSTEPS_REMEMBER_TOKEN env var"""
+            return ReadResourceResult(contents=[TextContent(type="text", text=text)])
 
-        if request.uri == "polarsteps://help":
-            help_text = """Polarsteps MCP Server Help
+        raise ValueError(f"Unknown resource: {request.method}")
 
-Available Tools:
-1. get_trip(trip_id) - Get detailed trip information
-2. get_user(username) - Get user profile and basic info
-3. get_user_trips(username) - Get all trips for a user
-4. search_trips(query) - Search for trips (placeholder)
+    def _success(self, text: str) -> CallToolResult:
+        """Create success response"""
+        return CallToolResult(content=[TextContent(type="text", text=text)])
 
-Setup:
-- Set POLARSTEPS_REMEMBER_TOKEN environment variable
-- Optionally set POLARSTEPS_BASE_URL (defaults to https://www.polarsteps.com)
-
-Examples:
-- Get trip: get_trip(trip_id="12345")
-- Get user: get_user(username="johndoe")
-- Get user trips: get_user_trips(username="johndoe")
-"""
-            return ReadResourceResult(
-                contents=[
-                    TextContent(
-                        type="text",
-                        text=help_text
-                    )
-                ]
-            )
-
-        raise ValueError(f"Unknown resource: {request.uri}")
+    def _error(self, text: str) -> CallToolResult:
+        """Create error response"""
+        return CallToolResult(content=[TextContent(type="text", text=text)], isError=True)
 
     async def run(self, read_stream, write_stream, initialization_options=None):
         """Run the MCP server with the provided streams"""
-        try:
-            # Test the client connection
-            if self.settings.remember_token:
-                self.logger.info("Testing Polarsteps API connection...")
-                _ = self.client  # This will initialize and test the client
-                self.logger.info("Successfully connected to Polarsteps API")
-            else:
-                self.logger.warning("No remember token provided. Tools will fail until token is set.")
-
-            # Run the server with streams
-            await self.server.run(read_stream, write_stream, initialization_options or {})
-        except Exception as e:
-            self.logger.error(f"Failed to run server: {e}")
-            raise
+        await self.server.run(read_stream, write_stream, initialization_options)
 
 
 async def main():
     """Main entry point for command-line usage"""
     from mcp.server.stdio import stdio_server
 
-    settings = PolarstepsMCPSettings()
-    server = PolarstepsMCPServer(settings)
+    server = PolarstepsMCPServer()
 
     # Run with stdio streams
     async with stdio_server() as (read_stream, write_stream):
