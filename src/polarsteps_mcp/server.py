@@ -94,7 +94,7 @@ async def serve() -> None:
     async def list_tools() -> list[Tool]:
         return [
             Tool(
-                name=str(tool),
+                name=tool.value,
                 description=tool.description,
                 inputSchema=tool.schema,
             )
@@ -159,3 +159,10 @@ async def serve() -> None:
     options = server.create_initialization_options()
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, options, raise_exceptions=True)
+
+
+def main() -> None:
+    """Entry point for the MCP server."""
+    import asyncio
+
+    asyncio.run(serve())

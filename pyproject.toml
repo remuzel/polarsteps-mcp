@@ -4,6 +4,16 @@ version = "0.1.0"
 description = "MCP server for Polarsteps API - enables Claude and other MCP clients to interact with travel data"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [{name = "Remi Uzel"}]
+keywords = ["mcp", "polarsteps", "llm", "travel", "api"]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+]
 dependencies = [
     "mcp>=1.0.0",
     "pydantic>=2.0.0",
@@ -11,41 +21,26 @@ dependencies = [
     "httpx>=0.24.0",
     "polarsteps-api @ file:///Users/remuzel/workplace/polarsteps-api",
     "ruff>=0.12.0",
-    "mypy>=1.16.1",
     "pre-commit>=4.2.0",
     "black>=25.1.0",
     "pytest>=8.4.1",
 ]
-authors = [
-    {name = "Remuzel", email = "remikaanuzel@gmail.com"}
-]
-license = {file = "LICENSE"}
-keywords = ["mcp", "polarsteps", "travel", "api"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
+
+[tool.uv]
+dev-dependencies = ["pyright>=1.1.389", "ruff>=0.7.3", "pytest>=8.0.0", "black>=23.0.0",]
 
 [project.scripts]
-polarsteps-mcp = "polarsteps_mcp.server:cli_main"
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0.0",
-]
+polarsteps-mcp = "polarsteps_mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
 
 [tool.black]
 line-length = 88
@@ -66,23 +61,6 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "-v",
-    "--tb=short",
-    "--strict-markers",
-    "--strict-config",
-    "--durations=5",
-]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-]
 
 [tool.coverage.run]
 source = ["src"]
@@ -110,21 +88,9 @@ fail_under = 80
 show_missing = true
 skip_covered = false
 
-[tool.mypy]
-python_version = "3.10"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
-
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101"]  # Skip assert_used check
-
-[dependency-groups]
-dev = [
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.0.0",
-]
