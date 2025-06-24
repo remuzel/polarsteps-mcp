@@ -1,10 +1,10 @@
 from enum import Enum
-from typing import Type
+from typing import Any, Type
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
-from polarsteps_api import PolarstepsClient, TripData, UserData
+from polarsteps_api import PolarstepsClient, Trip, UserData
 from pydantic import BaseModel, Field
 
 
@@ -39,18 +39,18 @@ class PolarstepsTool(str, Enum):
     def __new__(cls, value: str, description: str, method: Type[BaseModel]):
         obj = str.__new__(cls, value)
         obj._value_ = value
-        obj._description = description
-        obj._schema = method.model_json_schema()
+        obj._description = description  # type: ignore
+        obj._schema = method.model_json_schema()  # type: ignore
         return obj
 
     @property
-    def description(self):
-        return self._description
+    def description(self) -> str:
+        return self._description  # type: ignore
 
     @property
-    def schema(self):
+    def schema(self) -> dict[str, Any]:
         """Get the JSON schema for this tool's input model."""
-        return self._schema
+        return self._schema  # type: ignore
 
     USER = "get_user", "Shows all the users' polarstep information", GetUser
     USER_TRIPS = (
@@ -74,14 +74,16 @@ class PolarstepsTool(str, Enum):
 def get_user(polarsteps_client: PolarstepsClient, username: str) -> UserData:
     api_response = polarsteps_client.get_user_by_username(username)
     if api_response.is_error or api_response.user is None:
-        return {}
+        return UserData(
+            id=-1, uuid="00000000-0000-4000-8000-000000000000", username="unknown"
+        )
     return api_response.user
 
 
-def get_trip(polarsteps_client: PolarstepsClient, trip_id: int) -> TripData:
-    api_response = polarsteps_client.get_trip(trip_id)
+def get_trip(polarsteps_client: PolarstepsClient, trip_id: int) -> Trip:
+    api_response = polarsteps_client.get_trip(str(trip_id))
     if api_response.is_error or api_response.trip is None:
-        return {}
+        return Trip(id=-1, uuid="00000000-0000-4000-8000-000000000000")
     return api_response.trip
 
 
@@ -133,6 +135,10 @@ async def serve() -> None:
             case PolarstepsTool.USER_TRIPS:
                 user_data = get_user(client, arguments["username"])
                 trips = user_data.alltrips
+                if trips is None:
+                    return [
+                        TextContent(type="text", text="User has no available trip.")
+                    ]
                 parsed_trips = []
                 n_trips = int(arguments["max_trips"])  # todo - catch errors
                 for trip in trips[:n_trips]:

@@ -14,7 +14,6 @@ dependencies = [
     "mypy>=1.16.1",
     "pre-commit>=4.2.0",
     "black>=25.1.0",
-    "isort>=6.0.1",
     "pytest>=8.4.1",
 ]
 authors = [
@@ -55,8 +54,61 @@ target-version = ['py310']
 [tool.ruff]
 target-version = "py310"
 line-length = 88
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "B", "C4", "PIE", "SIM", "RET"]
 ignore = ["E501"]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--strict-config",
+    "--durations=5",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+fail_under = 80
+show_missing = true
+skip_covered = false
 
 [tool.mypy]
 python_version = "3.10"
@@ -66,6 +118,10 @@ warn_unused_configs = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]  # Skip assert_used check
 
 [dependency-groups]
 dev = [

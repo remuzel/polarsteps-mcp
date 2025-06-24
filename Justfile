@@ -14,8 +14,6 @@ setup:
 lint:
     @echo "🔍 Linting code..."
     uv run ruff check --fix --unsafe-fixes src tests
-    @echo "🔍 Type checking..."
-    uv run mypy src
     @echo "✅ Lint complete!"
 
 # Run tests

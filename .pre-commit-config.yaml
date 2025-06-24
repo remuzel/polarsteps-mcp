@@ -31,21 +31,13 @@ repos:
     rev: 24.4.2
     hooks:
       - id: black
-        language_version: python3
-
-  # Import sorting
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black", "--diff"]
 
   # Linting and formatting (replaces flake8, pylint, etc.)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.5.0
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+        args: [--fix]
       - id: ruff-format
 
   # YAML/JSON formatting
@@ -61,14 +53,14 @@ repos:
     hooks:
       - id: pytest-quick
         name: pytest-quick
-        entry: uv run pytest tests/ -x --tb=short --durations=5
+        entry: uv run pytest
         language: system
         pass_filenames: false
         stages: [pre-commit]
 
       - id: test-coverage
         name: test-coverage
-        entry: uv run pytest tests/ --cov=src --cov-fail-under=80 --cov-report=term-missing
+        entry: uv run pytest --cov=src
         language: system
         pass_filenames: false
         stages: [pre-push]

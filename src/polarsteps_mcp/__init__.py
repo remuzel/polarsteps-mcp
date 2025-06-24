@@ -10,7 +10,7 @@ from .server import serve
 @click.command()
 @click.option("--repository", "-r", type=Path, help="PolarStep path")
 @click.option("-v", "--verbose", count=True)
-def main(repository: Path | None, verbose: bool) -> None:
+def main(verbose: bool) -> None:
     """MCP PolarStep Server - PolarStep functionality for MCP"""
     import asyncio
 
@@ -21,7 +21,7 @@ def main(repository: Path | None, verbose: bool) -> None:
         logging_level = logging.DEBUG
 
     logging.basicConfig(level=logging_level, stream=sys.stderr)
-    asyncio.run(serve(repository))
+    asyncio.run(serve())
 
 
 if __name__ == "__main__":
