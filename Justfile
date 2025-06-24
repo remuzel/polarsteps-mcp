@@ -10,35 +10,24 @@ setup:
     uv run pre-commit install
     @echo "✅ Setup complete!"
 
-# Install dependencies
-install:
-    @echo "📦 Installing dependencies..."
-    uv sync
-
-# Install dev dependencies
-install-dev:
-    @echo "📦 Installing development dependencies..."
-    uv sync --dev
-
 # Lint code
 lint:
     @echo "🔍 Linting code..."
-    uv run ruff check --fix --unsafe-fixes polarsteps_mcp tests examples
-
-# Type check
-typecheck:
+    uv run ruff check --fix --unsafe-fixes src tests
     @echo "🔍 Type checking..."
-    uv run mypy polarsteps_mcp
+    uv run mypy src
+    @echo "✅ Lint complete!"
 
 # Run tests
 test:
     @echo "🧪 Running tests..."
     uv run pytest tests/ -v
+    @echo "✅ Tests complete!"
 
 # Test MCP server with inspector
 test-mcp:
     @echo "🔍 Testing MCP server with inspector..."
-    npx @modelcontextprotocol/inspector uv run polarsteps-mcp
+    npx @modelcontextprotocol/inspector uv run src/polarsteps-mcp
 
 # Run the MCP server directly
 run:
@@ -56,13 +45,18 @@ clean:
     rm -rf *.egg-info
     find . -type d -name __pycache__ -exec rm -rf {} +
     find . -type f -name "*.pyc" -delete
+    @echo "✅ Complete!"
 
 # Build package
 build:
     @echo "📦 Building package..."
     uv build
 
+    @echo "✅ Build complete!"
+
 # Update dependencies
 update:
     @echo "🔄 Updating dependencies..."
     uv lock --upgrade
+
+    @echo "✅ Done complete!"
