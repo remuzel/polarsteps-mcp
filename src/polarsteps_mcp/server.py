@@ -1,15 +1,21 @@
+from datetime import datetime
 from enum import Enum
 from typing import Any, Type
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
-from polarsteps_api import PolarstepsClient, Trip, UserData
+from polarsteps_api import PolarstepsClient
+from polarsteps_api.models import Trip, User
 from pydantic import BaseModel, Field
 
 
 # For each tool you're going to use, define the interaction model (what parameters are required, their description, ...)
 class GetUser(BaseModel):
+    username: str = Field(..., description="The users' username in Polarsteps")
+
+
+class GetUserStats(BaseModel):
     username: str = Field(..., description="The users' username in Polarsteps")
 
 
@@ -53,9 +59,10 @@ class PolarstepsTool(str, Enum):
         return self._schema  # type: ignore
 
     USER = "get_user", "Shows all the users' polarstep information", GetUser
+    USER_STATS = "get_user_stats", "Shows the users' travel statistics", GetUserStats
     USER_TRIPS = (
-        "get_all_user_trips",
-        "Shows a highlight of all (by default) the users' trips",
+        "get_user_trips",
+        "Shows a highlight of the users' latest N trips",
         GetUserTrips,
     )
     USER_FOLLOWERS = (
@@ -71,10 +78,10 @@ class PolarstepsTool(str, Enum):
     TRIP = "get_trip", "Show a specific trip", GetTrip
 
 
-def get_user(polarsteps_client: PolarstepsClient, username: str) -> UserData:
+def get_user(polarsteps_client: PolarstepsClient, username: str) -> User:
     api_response = polarsteps_client.get_user_by_username(username)
     if api_response.is_error or api_response.user is None:
-        return UserData(
+        return User(
             id=-1, uuid="00000000-0000-4000-8000-000000000000", username="unknown"
         )
     return api_response.user
@@ -85,6 +92,26 @@ def get_trip(polarsteps_client: PolarstepsClient, trip_id: int) -> Trip:
     if api_response.is_error or api_response.trip is None:
         return Trip(id=-1, uuid="00000000-0000-4000-8000-000000000000")
     return api_response.trip
+
+
+def get_top_trips(
+    polarsteps_client: PolarstepsClient, username: str, max_trips: int
+) -> str:
+    user_data = get_user(polarsteps_client, username)
+    trips = user_data.alltrips
+    if trips is None:
+        return "User has no available trip."
+    parsed_trips = []
+    n_trips = int(max_trips)  # todo - catch errors
+    for trip in trips[:n_trips]:
+        start = datetime.fromtimestamp(trip.start_date)
+        end = datetime.fromtimestamp(trip.end_date)
+        days = (end - start).days
+        parsed_trips.append(
+            f"[ID:{trip.id}] {trip.display_name or trip.name} {days} days from {start.strftime('%Y/%m/%d')} to {end.strftime('%Y/%m/%d')}. {trip.step_count} steps across {int(trip.total_km):,}km!"
+        )
+    trips_string = "".join(f"\t{trip}\n" for trip in parsed_trips)
+    return f"Top {n_trips} trips:\n{trips_string}"
 
 
 async def serve() -> None:
@@ -112,6 +139,12 @@ async def serve() -> None:
                 user_data = get_user(client, arguments["username"])
                 return [TextContent(type="text", text=f"User data:\n{user_data}")]
 
+            case PolarstepsTool.USER_STATS:
+                user_data = get_user(client, arguments["username"])
+                return [
+                    TextContent(type="text", text=f"User stats:\n{user_data.stats}")
+                ]
+
             case PolarstepsTool.USER_FOLLOWERS:
                 user_data = get_user(client, arguments["username"])
                 return [
@@ -133,25 +166,10 @@ async def serve() -> None:
                 return [TextContent(type="text", text=f"Trip data:\n{user_data}")]
 
             case PolarstepsTool.USER_TRIPS:
-                user_data = get_user(client, arguments["username"])
-                trips = user_data.alltrips
-                if trips is None:
-                    return [
-                        TextContent(type="text", text="User has no available trip.")
-                    ]
-                parsed_trips = []
-                n_trips = int(arguments["max_trips"])  # todo - catch errors
-                for trip in trips[:n_trips]:
-                    parsed_trips.append(
-                        f"[ID:{trip.id}] Trip to {trip.display_name or trip.name} from {trip.start_date} to {trip.end_date}. {trip.step_count} steps over {trip.total_km}km!"
-                    )
-                trips_string = "".join(f"\t{trip}\n" for trip in parsed_trips)
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"Top {n_trips} trips:\n{trips_string}",
-                    )
-                ]
+                top_trips = get_top_trips(
+                    client, arguments["username"], arguments["max_trips"]
+                )
+                return [TextContent(type="text", text=top_trips)]
 
             case _:
                 raise ValueError(f"Unknown tool: {name}")
