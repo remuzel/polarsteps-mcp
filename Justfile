@@ -19,7 +19,7 @@ lint:
 # Run tests
 test:
     @echo "🧪 Running tests..."
-    uv run pytest tests/ -v
+    uv run pytest tests/ -v --cov=src/polarsteps_mcp --cov-report=term-missing --cov-report=html
     @echo "✅ Tests complete!"
 
 # Test MCP server with inspector
