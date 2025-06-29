@@ -4,17 +4,15 @@ from mcp.types import TextContent, Tool
 from polarsteps_api import PolarstepsClient
 
 from polarsteps_mcp.tools import (
+    GetTravelStats,
     GetTripInput,
+    GetTripsInput,
     GetUserInput,
-    GetUserSocialStatusInput,
-    GetUserStatsInput,
-    GetUserTripsInput,
     PolarstepsTool,
+    get_travel_stats,
     get_trip,
+    get_trips,
     get_user,
-    get_user_social_status,
-    get_user_stats,
-    get_user_trips,
 )
 
 
@@ -43,21 +41,17 @@ async def serve() -> None:
                 input = GetUserInput(**args)
                 return get_user(client, input)
 
-            case PolarstepsTool.USER_STATS:
-                input = GetUserStatsInput(**args)
-                return get_user_stats(client, input)
-
-            case PolarstepsTool.USER_SOCIAL_STATUS:
-                input = GetUserSocialStatusInput(**args)
-                return get_user_social_status(client, input)
+            case PolarstepsTool.TRAVEL_STATS:
+                input = GetTravelStats(**args)
+                return get_travel_stats(client, input)
 
             case PolarstepsTool.TRIP:
                 input = GetTripInput(**args)
                 return get_trip(client, input)
 
-            case PolarstepsTool.USER_TRIPS:
-                input = GetUserTripsInput(**args)
-                return get_user_trips(client, input)
+            case PolarstepsTool.TRIPS:
+                input = GetTripsInput(**args)
+                return get_trips(client, input)
 
             case _:
                 raise ValueError(f"Unknown tool: {name}")
