@@ -6,12 +6,14 @@ from polarsteps_api import PolarstepsClient
 from polarsteps_mcp.tools import (
     GetTravelStats,
     GetTripInput,
+    GetTripsByNameInput,
     GetTripsInput,
     GetUserInput,
     PolarstepsTool,
     get_travel_stats,
     get_trip,
     get_trips,
+    get_trips_by_name,
     get_user,
 )
 
@@ -52,6 +54,10 @@ async def serve() -> None:
             case PolarstepsTool.TRIPS:
                 input = GetTripsInput(**args)
                 return get_trips(client, input)
+
+            case PolarstepsTool.TRIPS_BY_NAME:
+                input = GetTripsByNameInput(**args)
+                return get_trips_by_name(client, input)
 
             case _:
                 raise ValueError(f"Unknown tool: {name}")

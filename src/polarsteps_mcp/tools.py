@@ -6,7 +6,12 @@ from mcp.types import TextContent
 from polarsteps_api import PolarstepsClient
 from pydantic import BaseModel, Field
 
-from polarsteps_mcp.utils import _get_trip, _get_user, single_text_content
+from polarsteps_mcp.utils import (
+    _get_trip,
+    _get_user,
+    fuzzy_search_items,
+    single_text_content,
+)
 
 
 # For each tool you're going to use, define the interaction model (what parameters are required, their description, ...)
@@ -76,7 +81,20 @@ def get_trips(
         )
     return [TextContent(type="text", text=json.dumps(trip.to_summary())) for trip in user.alltrips[:input.n_trips]]
 
+class GetTripsByNameInput(BaseModel):
+    username: str = Field(..., description="The users' username in Polarsteps")
+    name_query: str = Field(..., description="Name to search by in trips")
 
+def get_trips_by_name(polarsteps_client: PolarstepsClient, input: GetTripsByNameInput):
+    user = _get_user(polarsteps_client, input.username)
+    if user.alltrips is None:
+        return single_text_content(
+            f"User @{input.username} does not have any trips!"
+        )
+
+    matched_trips = fuzzy_search_items(user.alltrips, input.name_query, field_name="name")
+
+    return [TextContent(type="text", text=trip.model_dump_json(include={"id", "name"})) for trip, _ in matched_trips]
 
 # Define an enum for each available tool, this will be parsed by the MCP Server
 class PolarstepsTool(str, Enum):
@@ -107,4 +125,9 @@ class PolarstepsTool(str, Enum):
         "get_trips",
         "Shows a highlight of the users' latest N trips",
         GetTripsInput,
+    )
+    TRIPS_BY_NAME = (
+        "get_trips_by_name",
+        "Search trips by name",
+        GetTripsByNameInput
     )

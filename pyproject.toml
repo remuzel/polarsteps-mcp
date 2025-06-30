@@ -24,6 +24,7 @@ dependencies = [
     "pre-commit>=4.2.0",
     "black>=25.1.0",
     "pytest>=8.4.1",
+    "rapidfuzz>=3.13.0",
 ]
 
 [tool.uv]
