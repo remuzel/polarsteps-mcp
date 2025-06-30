@@ -8,15 +8,15 @@ from polarsteps_api.models import Location, Stats, Step, Trip, User
 from polarsteps_mcp.tools import (
     GetTravelStats,
     GetTripInput,
-    GetTripsByNameInput,
     GetTripsInput,
     GetUserInput,
     PolarstepsTool,
+    SearchTripsInput,
     get_travel_stats,
     get_trip,
     get_trips,
-    get_trips_by_name,
     get_user,
+    search_trips,
 )
 
 
@@ -153,7 +153,7 @@ class TestGetUser:
 
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
-            assert "Could not find user with username: nonexistent" in result[0].text
+            assert "User not found: No Polarsteps user exists with username=nonexistent. Please verify the username is correct and the user's profile is public." in result[0].text
 
     @pytest.mark.parametrize(
         "username",
@@ -428,16 +428,16 @@ class TestGetTripsByName:
     def test_get_trips_by_name_no_results(self, mock_polarsteps_client, sample_user):
         """Test no matching trips found."""
         with patch("polarsteps_mcp.tools._get_user", return_value=sample_user):
-            input_data = GetTripsByNameInput(username="testuser", name_query="doesn't-exist")
-            result = get_trips_by_name(mock_polarsteps_client, input_data)
+            input_data = SearchTripsInput(username="testuser", name_query="doesn't-exist")
+            result = search_trips(mock_polarsteps_client, input_data)
 
             assert result == []
 
     def test_get_trips_by_name(self, mock_polarsteps_client, sample_user):
         """Test successful search for trips by name."""
         with patch("polarsteps_mcp.tools._get_user", return_value=sample_user):
-            input_data = GetTripsByNameInput(username="testuser", name_query="Europe")
-            result = get_trips_by_name(mock_polarsteps_client, input_data)
+            input_data = SearchTripsInput(username="testuser", name_query="Europe")
+            result = search_trips(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
