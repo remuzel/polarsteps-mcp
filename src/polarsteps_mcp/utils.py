@@ -15,7 +15,7 @@ def fuzzy_search_items(
     query: str,
     field_name: str = "name",
     threshold: int = 60,
-    limit: Optional[int] = None
+    limit: Optional[int] = None,
 ) -> List[Tuple[Any, int]]:
     """
     Fuzzy search items by a specific field.
@@ -45,10 +45,7 @@ def fuzzy_search_items(
 
     # Perform fuzzy matching
     matches = process.extract(
-        query,
-        field_values,
-        scorer=fuzz.partial_ratio,
-        limit=limit
+        query, field_values, scorer=fuzz.partial_ratio, limit=limit
     )
 
     # Filter by threshold and return with original items
@@ -58,6 +55,7 @@ def fuzzy_search_items(
             results.append((items[index], score))
 
     return results
+
 
 def _get_user(polarsteps_client: PolarstepsClient, username: str) -> User:
     api_response = polarsteps_client.get_user_by_username(username)

@@ -140,6 +140,7 @@ class TestGetUser:
             assert isinstance(result[0], TextContent)
             # The result should be JSON string containing user summary
             import json
+
             user_data = json.loads(result[0].text)
             assert user_data["first_name"] == "John"
             assert user_data["last_name"] == "Doe"
@@ -153,7 +154,10 @@ class TestGetUser:
 
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
-            assert "User not found: No Polarsteps user exists with username=nonexistent. Please verify the username is correct and the user's profile is public." in result[0].text
+            assert (
+                "User not found: No Polarsteps user exists with username=nonexistent. Please verify the username is correct and the user's profile is public."
+                in result[0].text
+            )
 
     @pytest.mark.parametrize(
         "username",
@@ -178,6 +182,7 @@ class TestGetUserStats:
             assert isinstance(result[0], TextContent)
             # Should contain JSON representation of stats
             import json
+
             stats_data = json.loads(result[0].text)
             assert stats_data["country_count"] == 15
             assert stats_data["km_count"] == 50000
@@ -214,6 +219,7 @@ class TestGetUserTrips:
 
             # Check that each result contains JSON data for a trip
             import json
+
             trip1_data = json.loads(result[0].text)
             trip2_data = json.loads(result[1].text)
 
@@ -231,10 +237,13 @@ class TestGetUserTrips:
 
             # Check first trip
             import json
+
             trip1_data = json.loads(result[0].text)
             assert trip1_data["name"] == "Europe Adventure 2023"
 
-    def test_get_user_trips_max_trips_larger_than_available(self, mock_polarsteps_client, sample_user):
+    def test_get_user_trips_max_trips_larger_than_available(
+        self, mock_polarsteps_client, sample_user
+    ):
         """Test max_trips parameter when larger than available trips."""
         with patch("polarsteps_mcp.tools._get_user", return_value=sample_user):
             input_data = GetTripsInput(username="testuser", n_trips=10)
@@ -244,6 +253,7 @@ class TestGetUserTrips:
             assert len(result) == 2
 
             import json
+
             trip1_data = json.loads(result[0].text)
             trip2_data = json.loads(result[1].text)
             assert trip1_data["name"] == "Europe Adventure 2023"
@@ -303,7 +313,7 @@ class TestGetTrip:
             "name": "Paris Visit",
             "location": {"name": "Paris", "country": "France"},
             "description": "Beautiful city",
-            "start_time": 1672531200
+            "start_time": 1672531200,
         }
 
         mock_step2 = Mock()
@@ -318,13 +328,13 @@ class TestGetTrip:
             "name": "Rome Visit",
             "location": {"name": "Rome", "country": "Italy"},
             "description": "Historic city",
-            "start_time": 1672617600
+            "start_time": 1672617600,
         }
 
         sample_trip.all_steps = [mock_step1, mock_step2]
 
         with patch("polarsteps_mcp.tools._get_trip", return_value=sample_trip):
-            input_data = GetTripInput(trip_id=1000001) # type: ignore
+            input_data = GetTripInput(trip_id=1000001)  # type: ignore
             result = get_trip(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
@@ -332,6 +342,7 @@ class TestGetTrip:
 
             # The result should be JSON string containing trip detailed summary
             import json
+
             trip_data = json.loads(result[0].text)
             assert trip_data["name"] == "Europe Adventure 2023"
             assert trip_data["summary"] == "An amazing journey through Europe"
@@ -352,13 +363,14 @@ class TestGetTrip:
         )
 
         with patch("polarsteps_mcp.tools._get_trip", return_value=trip_no_steps):
-            input_data = GetTripInput(trip_id=1000001) # type: ignore
+            input_data = GetTripInput(trip_id=1000001)  # type: ignore
             result = get_trip(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
 
             # The result should be JSON string containing trip detailed summary
             import json
+
             trip_data = json.loads(result[0].text)
             assert trip_data["name"] == "Simple Trip"
             assert trip_data["summary"] == "A simple trip"
@@ -375,16 +387,18 @@ class TestGetTrip:
             summary="A simple trip",
             start_date=1672531200,
             end_date=1672531200,
-            all_steps=[Step(
-                id=1001,
-                uuid='123',
-                trip_id=1000001,
-                name="Sample Step",
-                description="A nice place",  # Has description so will be included
-                location=Location(name="Fairy Land", country="Fairy Land"),
-                start_time=1672531200,
-                is_deleted=False,
-            )],
+            all_steps=[
+                Step(
+                    id=1001,
+                    uuid="123",
+                    trip_id=1000001,
+                    name="Sample Step",
+                    description="A nice place",  # Has description so will be included
+                    location=Location(name="Fairy Land", country="Fairy Land"),
+                    start_time=1672531200,
+                    is_deleted=False,
+                )
+            ],
         )
 
         with patch("polarsteps_mcp.tools._get_trip", return_value=trip_one_step):
@@ -395,6 +409,7 @@ class TestGetTrip:
 
             # The result should be JSON string containing trip detailed summary
             import json
+
             trip_data = json.loads(result[0].text)
             assert trip_data["name"] == "Simple Trip"
             assert len(trip_data["steps"]) == 1
@@ -404,7 +419,7 @@ class TestGetTrip:
     def test_get_trip_not_found(self, mock_polarsteps_client, not_found_trip):
         """Test trip not found scenario."""
         with patch("polarsteps_mcp.tools._get_trip", return_value=not_found_trip):
-            input_data = GetTripInput(trip_id=1000001) # type: ignore
+            input_data = GetTripInput(trip_id=1000001)  # type: ignore
             result = get_trip(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
@@ -413,14 +428,15 @@ class TestGetTrip:
     @pytest.mark.parametrize("trip_id", [1000000, 1234567, 9999999])
     def test_get_trip_input_validation_valid(self, trip_id):
         """Test GetTripInput validation with valid trip IDs."""
-        input_data = GetTripInput(trip_id=trip_id) # type: ignore
+        input_data = GetTripInput(trip_id=trip_id)  # type: ignore
         assert input_data.trip_id == trip_id
 
     @pytest.mark.parametrize("trip_id", [0, 999999, -1])
     def test_get_trip_input_validation_invalid(self, trip_id):
         """Test GetTripInput validation with invalid trip IDs."""
         with pytest.raises(ValueError):
-            GetTripInput(trip_id=trip_id) # type: ignore
+            GetTripInput(trip_id=trip_id)  # type: ignore
+
 
 class TestGetTripsByName:
     """Test cases for get_trips_by_name."""
@@ -428,7 +444,9 @@ class TestGetTripsByName:
     def test_get_trips_by_name_no_results(self, mock_polarsteps_client, sample_user):
         """Test no matching trips found."""
         with patch("polarsteps_mcp.tools._get_user", return_value=sample_user):
-            input_data = SearchTripsInput(username="testuser", name_query="doesn't-exist")
+            input_data = SearchTripsInput(
+                username="testuser", name_query="doesn't-exist"
+            )
             result = search_trips(mock_polarsteps_client, input_data)
 
             assert result == []
@@ -442,6 +460,7 @@ class TestGetTripsByName:
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
             assert result[0].text == '{"id":1000001,"name":"Europe Adventure 2023"}'
+
 
 class TestPolarstepsTool:
     """Test that all tools are correctly defined."""

@@ -16,7 +16,10 @@ from polarsteps_mcp.utils import (
 
 # For each tool you're going to use, define the interaction model (what parameters are required, their description, ...)
 class GetUserInput(BaseModel):
-    username: str = Field(..., description="The Polarsteps username (without @ symbol) to fetch profile information for")
+    username: str = Field(
+        ...,
+        description="The Polarsteps username (without @ symbol) to fetch profile information for",
+    )
 
 
 def get_user(
@@ -31,7 +34,10 @@ def get_user(
 
 
 class GetTravelStats(BaseModel):
-    username: str = Field(..., description="The Polarsteps username to retrieve travel statistics and metrics for")
+    username: str = Field(
+        ...,
+        description="The Polarsteps username to retrieve travel statistics and metrics for",
+    )
 
 
 def get_travel_stats(
@@ -39,15 +45,15 @@ def get_travel_stats(
 ) -> list[TextContent]:
     user = _get_user(polarsteps_client, input.username)
     if user.stats is None:
-        return single_text_content(
-            f"User @{input.username} does not have travel stats"
-        )
+        return single_text_content(f"User @{input.username} does not have travel stats")
     return single_text_content(user.stats.model_dump_json())
 
 
 class GetTripInput(BaseModel):
     trip_id: int = Field(
-        ..., description="The unique numerical identifier of a Polarsteps trip (typically 7+ digits)", ge=1_000_000
+        ...,
+        description="The unique numerical identifier of a Polarsteps trip (typically 7+ digits)",
+        ge=1_000_000,
     )
     n_steps: int = Field(
         5,
@@ -64,8 +70,11 @@ def get_trip(
         return single_text_content(f"Could not find trip with ID: {input.trip_id}")
     return single_text_content(json.dumps(trip.to_detailed_summary(input.n_steps)))
 
+
 class GetTripsInput(BaseModel):
-    username: str = Field(..., description="The Polarsteps username whose trips you want to retrieve")
+    username: str = Field(
+        ..., description="The Polarsteps username whose trips you want to retrieve"
+    )
     n_trips: int = Field(
         5,
         ge=1,
@@ -78,25 +87,38 @@ def get_trips(
 ) -> list[TextContent]:
     user = _get_user(polarsteps_client, input.username)
     if user.alltrips is None:
-        return single_text_content(
-            f"User @{input.username} does not have any trips!"
-        )
-    return [TextContent(type="text", text=json.dumps(trip.to_summary())) for trip in user.alltrips[:input.n_trips]]
+        return single_text_content(f"User @{input.username} does not have any trips!")
+    return [
+        TextContent(type="text", text=json.dumps(trip.to_summary()))
+        for trip in user.alltrips[: input.n_trips]
+    ]
+
 
 class SearchTripsInput(BaseModel):
-    username: str = Field(..., description="The Polarsteps username whose trips you want to search through")
-    name_query: str = Field(..., description="Search term to match against trip names/titles (supports partial matching and fuzzy search)")
+    username: str = Field(
+        ...,
+        description="The Polarsteps username whose trips you want to search through",
+    )
+    name_query: str = Field(
+        ...,
+        description="Search term to match against trip names/titles (supports partial matching and fuzzy search)",
+    )
+
 
 def search_trips(polarsteps_client: PolarstepsClient, input: SearchTripsInput):
     user = _get_user(polarsteps_client, input.username)
     if user.alltrips is None:
-        return single_text_content(
-            f"User @{input.username} does not have any trips!"
-        )
+        return single_text_content(f"User @{input.username} does not have any trips!")
 
-    matched_trips = fuzzy_search_items(user.alltrips, input.name_query, field_name="name")
+    matched_trips = fuzzy_search_items(
+        user.alltrips, input.name_query, field_name="name"
+    )
 
-    return [TextContent(type="text", text=trip.model_dump_json(include={"id", "name"})) for trip, _ in matched_trips]
+    return [
+        TextContent(type="text", text=trip.model_dump_json(include={"id", "name"}))
+        for trip, _ in matched_trips
+    ]
+
 
 # Define an enum for each available tool, this will be parsed by the MCP Server
 class PolarstepsTool(str, Enum):
@@ -116,13 +138,21 @@ class PolarstepsTool(str, Enum):
         """Get the JSON schema for this tool's input model."""
         return self._schema  # type: ignore
 
-    USER = "get_user", "Fetch detailed user profile information from Polarsteps including basic stats, profile details, and account information. Use this to get overview information about a traveler, their profile setup, and basic travel metrics before diving into specific trips or detailed statistics.", GetUserInput
+    USER = (
+        "get_user",
+        "Fetch detailed user profile information from Polarsteps including basic stats, profile details, and account information. Use this to get overview information about a traveler, their profile setup, and basic travel metrics before diving into specific trips or detailed statistics.",
+        GetUserInput,
+    )
     TRAVEL_STATS = (
         "get_travel_stats",
         "Retrieve comprehensive travel statistics and metrics for a Polarsteps user, including countries visited, total distance traveled, trip counts, and detailed travel analytics. Perfect for getting a complete picture of someone's travel history and achievements.",
         GetTravelStats,
     )
-    TRIP = "get_trip", "Get comprehensive details about a specific trip including summary, timeline, route information, individual steps/locations, weather data, and engagement metrics. Requires a trip ID (obtainable from get_trips or search_trips). Use n_steps parameter to control how many trip steps/locations to include in the response.", GetTripInput
+    TRIP = (
+        "get_trip",
+        "Get comprehensive details about a specific trip including summary, timeline, route information, individual steps/locations, weather data, and engagement metrics. Requires a trip ID (obtainable from get_trips or search_trips). Use n_steps parameter to control how many trip steps/locations to include in the response.",
+        GetTripInput,
+    )
     TRIPS = (
         "get_trips",
         "Fetch a list of a user's recent trips with summary information including trip names, dates, duration, and basic stats. Ideal for browsing someone's travel history or finding trip IDs for detailed exploration. Use n_trips parameter to control how many recent trips to retrieve (default: 5).",
@@ -131,5 +161,5 @@ class PolarstepsTool(str, Enum):
     SEARCH_TRIPS = (
         "search_trips",
         "Search through a user's trips by name/title using fuzzy matching to find specific trips. Ideal for finding trips by destination (e.g., 'japan', 'italy'), themes (e.g., 'honeymoon', 'business'), or partial name matches. Supports flexible search terms that don't need to match exactly - the fuzzy matching will find relevant trips even with approximate spelling or partial keywords.",
-        SearchTripsInput
+        SearchTripsInput,
     )

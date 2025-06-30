@@ -13,6 +13,7 @@ setup:
 lint:
     @echo "🔍 Linting code..."
     uv run ruff check --fix --unsafe-fixes src tests
+    uv run ruff format
     @echo "✅ Lint complete!"
 
 # Run tests
