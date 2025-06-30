@@ -21,6 +21,8 @@ from polarsteps_mcp.tools import (
 async def serve() -> None:
     server = Server("polarsteps-mcp")
 
+    client = PolarstepsClient()
+
     @server.list_tools()
     async def list_tools() -> list[Tool]:
         return [
@@ -34,10 +36,6 @@ async def serve() -> None:
 
     @server.call_tool()
     async def call_tool(name: str, args: dict) -> list[TextContent]:
-        # For all commands, we need an existing client
-        # todo - initialize this as part of the server so it's not generated at each tool-call
-        client = PolarstepsClient()
-
         match name:
             case PolarstepsTool.USER:
                 input = GetUserInput(**args)
