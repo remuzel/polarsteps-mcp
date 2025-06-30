@@ -7,7 +7,6 @@ default:
 setup:
     @echo "🚀 Setting up development environment..."
     uv sync --dev
-    uv run pre-commit install
     @echo "✅ Setup complete!"
 
 # Lint code

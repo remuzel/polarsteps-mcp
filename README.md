@@ -73,3 +73,13 @@ just test
 # Format code
 just lint
 ```
+
+---
+
+## ⚠️ Legal Notice
+
+This MCP server uses the [`polarsteps-api`](https://github.com/remuzel/polarsteps-api) package to access Polarsteps data through undocumented APIs. 
+
+**Important**: Please read the full legal disclaimer and terms of use in the [polarsteps-api package](https://github.com/remuzel/polarsteps-api#%EF%B8%8F-important-disclaimers) before using this tool.
+
+By using this MCP server, you agree to the terms outlined in the API package and acknowledge the associated risks.
