@@ -71,6 +71,40 @@ def get_trip(
     return single_text_content(json.dumps(trip.to_detailed_summary(input.n_steps)))
 
 
+class GetTripLogInput(BaseModel):
+    trip_id: int = Field(
+        ...,
+        description="The unique numerical identifier of a Polarsteps trip (typically 7+ digits)",
+        ge=1_000_000,
+    )
+
+
+def get_trip_log(
+    polarsteps_client: PolarstepsClient, input: GetTripLogInput
+) -> list[TextContent]:
+    trip = _get_trip(polarsteps_client, input.trip_id)
+    if trip.id == -1:
+        return single_text_content(f"Could not find trip with ID: {input.trip_id}")
+    if trip.all_steps is None:
+        return single_text_content(
+            f"Trip with ID {input.trip_id} does not have any logged steps"
+        )
+
+    trip_log = [
+        {
+            "timestamp": step.timestamp,
+            "title": step.name,
+            "description": step.description,
+            "location": f"{step.location.name} ({step.location.country_code})"
+            if step.location
+            else "Unknown",
+        }
+        for step in trip.all_steps
+        if step.name is not None
+    ]
+    return single_text_content(json.dumps(trip_log))
+
+
 class GetTripsInput(BaseModel):
     username: str = Field(
         ..., description="The Polarsteps username whose trips you want to retrieve"
@@ -150,8 +184,13 @@ class PolarstepsTool(str, Enum):
     )
     TRIP = (
         "get_trip",
-        "Get comprehensive details about a specific trip including summary, timeline, route information, individual steps/locations, weather data, and engagement metrics. Requires a trip ID (obtainable from get_trips or search_trips). Use n_steps parameter to control how many trip steps/locations to include in the response.",
+        "Get comprehensive details about a specific trip including summary, timeline, route information, individual steps/locations, weather data, and engagement metrics. Use after get_trip_log when you need detailed information about specific locations or comprehensive trip data.",
         GetTripInput,
+    )
+    TRIP_LOG = (
+        "get_trip_log",
+        "Get an overview of the specific trip; this includes just a list of summarized steps, each including timestamp/title/description/location. Use this first for trip overviews before diving into detailed information.",
+        GetTripLogInput,
     )
     TRIPS = (
         "get_trips",
@@ -160,6 +199,6 @@ class PolarstepsTool(str, Enum):
     )
     SEARCH_TRIPS = (
         "search_trips",
-        "Search through a user's trips by name/title using fuzzy matching to find specific trips. Ideal for finding trips by destination (e.g., 'japan', 'italy'), themes (e.g., 'honeymoon', 'business'), or partial name matches. Supports flexible search terms that don't need to match exactly - the fuzzy matching will find relevant trips even with approximate spelling or partial keywords.",
+        "Search through a user's trips by name/title using fuzzy matching to find specific trips. Ideal for finding trips by destination (e.g., 'japan', 'italy'), themes (e.g., 'honeymoon', 'business'), or partial name matches. Supports flexible search terms that don't need to match exactly - the fuzzy matching will find relevant trips even with approximate spelling or partial keywords. **Use this as the first step when looking for specific trips by destination, theme, or name.**",
         SearchTripsInput,
     )

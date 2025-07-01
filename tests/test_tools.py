@@ -8,12 +8,14 @@ from polarsteps_api.models import Location, Stats, Step, Trip, User
 from polarsteps_mcp.tools import (
     GetTravelStats,
     GetTripInput,
+    GetTripLogInput,
     GetTripsInput,
     GetUserInput,
     PolarstepsTool,
     SearchTripsInput,
     get_travel_stats,
     get_trip,
+    get_trip_log,
     get_trips,
     get_user,
     search_trips,
@@ -438,7 +440,237 @@ class TestGetTrip:
             GetTripInput(trip_id=trip_id)  # type: ignore
 
 
-class TestGetTripsByName:
+class TestGetTripLog:
+    """Test cases for the get_trip_log function."""
+
+    def test_get_trip_log_success(self, mock_polarsteps_client):
+        """Test successful trip log retrieval."""
+        # Create a trip with steps that have all required attributes
+        sample_trip = Trip(
+            id=1000001,
+            uuid="550e8400-e29b-41d4-a716-446655440001",
+            name="Europe Adventure 2023",
+            summary="An amazing journey through Europe",
+            start_date=1672531200,
+            end_date=1675209600,
+            total_km=5000.0,
+            step_count=2,
+        )
+
+        # Create mock steps with all required attributes
+        mock_step1 = Mock()
+        mock_step1.timestamp = 1672531200  # 2023-01-01
+        mock_step1.name = "Paris Visit"
+        mock_step1.description = "Beautiful city with amazing architecture"
+        mock_step1.location = Mock()
+        mock_step1.location.name = "Paris"
+        mock_step1.location.country_code = "FR"
+
+        mock_step2 = Mock()
+        mock_step2.timestamp = 1672617600  # 2023-01-02
+        mock_step2.name = "Rome Visit"
+        mock_step2.description = "Historic city with incredible history"
+        mock_step2.location = Mock()
+        mock_step2.location.name = "Rome"
+        mock_step2.location.country_code = "IT"
+
+        sample_trip.all_steps = [mock_step1, mock_step2]
+
+        with patch("polarsteps_mcp.tools._get_trip", return_value=sample_trip):
+            input_data = GetTripLogInput(trip_id=1000001)
+            result = get_trip_log(mock_polarsteps_client, input_data)
+
+            assert len(result) == 1
+            assert isinstance(result[0], TextContent)
+
+            # Parse the JSON result
+            import json
+
+            trip_log = json.loads(result[0].text)
+
+            assert len(trip_log) == 2
+
+            # Check first step
+            assert trip_log[0]["timestamp"] == 1672531200
+            assert trip_log[0]["title"] == "Paris Visit"
+            assert (
+                trip_log[0]["description"] == "Beautiful city with amazing architecture"
+            )
+            assert trip_log[0]["location"] == "Paris (FR)"
+
+            # Check second step
+            assert trip_log[1]["timestamp"] == 1672617600
+            assert trip_log[1]["title"] == "Rome Visit"
+            assert trip_log[1]["description"] == "Historic city with incredible history"
+            assert trip_log[1]["location"] == "Rome (IT)"
+
+    def test_get_trip_log_with_steps_without_names(self, mock_polarsteps_client):
+        """Test trip log with some steps that don't have names (should be filtered out)."""
+        sample_trip = Trip(
+            id=1000001,
+            uuid="550e8400-e29b-41d4-a716-446655440001",
+            name="Mixed Trip",
+            summary="A trip with mixed step types",
+            start_date=1672531200,
+            end_date=1675209600,
+            total_km=2000.0,
+            step_count=3,
+        )
+
+        # Create steps - some with names, some without
+        mock_step1 = Mock()
+        mock_step1.timestamp = 1672531200
+        mock_step1.name = "Named Step"
+        mock_step1.description = "This step has a name"
+        mock_step1.location = Mock()
+        mock_step1.location.name = "Paris"
+        mock_step1.location.country_code = "FR"
+
+        mock_step2 = Mock()
+        mock_step2.timestamp = 1672617600
+        mock_step2.name = None  # No name - should be filtered out
+        mock_step2.description = "This step has no name"
+        mock_step2.location = Mock()
+        mock_step2.location.name = "Unknown"
+        mock_step2.location.country_code = "XX"
+
+        mock_step3 = Mock()
+        mock_step3.timestamp = 1672704000
+        mock_step3.name = "Another Named Step"
+        mock_step3.description = "This step also has a name"
+        mock_step3.location = Mock()
+        mock_step3.location.name = "Rome"
+        mock_step3.location.country_code = "IT"
+
+        sample_trip.all_steps = [mock_step1, mock_step2, mock_step3]
+
+        with patch("polarsteps_mcp.tools._get_trip", return_value=sample_trip):
+            input_data = GetTripLogInput(trip_id=1000001)
+            result = get_trip_log(mock_polarsteps_client, input_data)
+
+            assert len(result) == 1
+            assert isinstance(result[0], TextContent)
+
+            # Parse the JSON result
+            import json
+
+            trip_log = json.loads(result[0].text)
+
+            # Should only have 2 steps (the ones with names)
+            assert len(trip_log) == 2
+            assert trip_log[0]["title"] == "Named Step"
+            assert trip_log[1]["title"] == "Another Named Step"
+
+    def test_get_trip_log_with_no_location(self, mock_polarsteps_client):
+        """Test trip log with steps that have no location."""
+        sample_trip = Trip(
+            id=1000001,
+            uuid="550e8400-e29b-41d4-a716-446655440001",
+            name="No Location Trip",
+            summary="A trip with steps without locations",
+            start_date=1672531200,
+            end_date=1675209600,
+            total_km=1000.0,
+            step_count=1,
+        )
+
+        mock_step = Mock()
+        mock_step.timestamp = 1672531200
+        mock_step.name = "Mystery Step"
+        mock_step.description = "A step with no location"
+        mock_step.location = None  # No location
+
+        sample_trip.all_steps = [mock_step]
+
+        with patch("polarsteps_mcp.tools._get_trip", return_value=sample_trip):
+            input_data = GetTripLogInput(trip_id=1000001)
+            result = get_trip_log(mock_polarsteps_client, input_data)
+
+            assert len(result) == 1
+            assert isinstance(result[0], TextContent)
+
+            # Parse the JSON result
+            import json
+
+            trip_log = json.loads(result[0].text)
+
+            assert len(trip_log) == 1
+            assert trip_log[0]["title"] == "Mystery Step"
+            assert trip_log[0]["location"] == "Unknown"
+
+    def test_get_trip_log_empty_steps(self, mock_polarsteps_client):
+        """Test trip log with no steps."""
+        sample_trip = Trip(
+            id=1000001,
+            uuid="550e8400-e29b-41d4-a716-446655440001",
+            name="Empty Trip",
+            summary="A trip with no steps",
+            start_date=1672531200,
+            end_date=1675209600,
+            total_km=0.0,
+            step_count=0,
+        )
+
+        sample_trip.all_steps = []
+
+        with patch("polarsteps_mcp.tools._get_trip", return_value=sample_trip):
+            input_data = GetTripLogInput(trip_id=1000001)
+            result = get_trip_log(mock_polarsteps_client, input_data)
+
+            assert len(result) == 1
+            assert isinstance(result[0], TextContent)
+
+            # Parse the JSON result
+            import json
+
+            trip_log = json.loads(result[0].text)
+
+            assert trip_log == []
+
+    def test_get_trip_log_trip_not_found(self, mock_polarsteps_client, not_found_trip):
+        """Test trip log when trip is not found."""
+        with patch("polarsteps_mcp.tools._get_trip", return_value=not_found_trip):
+            input_data = GetTripLogInput(trip_id=1000001)
+            result = get_trip_log(mock_polarsteps_client, input_data)
+
+            assert len(result) == 1
+            assert isinstance(result[0], TextContent)
+            assert "Could not find trip with ID: 1000001" in result[0].text
+
+    def test_get_trip_log_trip_no_steps_attribute(self, mock_polarsteps_client):
+        """Test trip log when trip has no all_steps attribute."""
+        trip_no_steps_attr = Trip(
+            id=1000001,
+            uuid="550e8400-e29b-41d4-a716-446655440001",
+            name="No Steps Attr Trip",
+            summary="A trip without all_steps attribute",
+            start_date=1672531200,
+            end_date=1675209600,
+            total_km=1000.0,
+            step_count=0,
+        )
+        trip_no_steps_attr.all_steps = None
+
+        with patch("polarsteps_mcp.tools._get_trip", return_value=trip_no_steps_attr):
+            input_data = GetTripLogInput(trip_id=1000001)
+            result = get_trip_log(mock_polarsteps_client, input_data)
+
+            assert len(result) == 1
+            assert isinstance(result[0], TextContent)
+            assert "Trip with ID 1000001 does not have any logged steps" in result[0].text
+
+    @pytest.mark.parametrize("trip_id", [1000000, 1234567, 9999999])
+    def test_get_trip_log_input_validation_valid(self, trip_id):
+        """Test GetTripLogInput validation with valid trip IDs."""
+        input_data = GetTripLogInput(trip_id=trip_id)
+        assert input_data.trip_id == trip_id
+
+    @pytest.mark.parametrize("trip_id", [0, 999999, -1])
+    def test_get_trip_log_input_validation_invalid(self, trip_id):
+        """Test GetTripLogInput validation with invalid trip IDs."""
+        with pytest.raises(ValueError):
+            GetTripLogInput(trip_id=trip_id)
+
     """Test cases for get_trips_by_name."""
 
     def test_get_trips_by_name_no_results(self, mock_polarsteps_client, sample_user):
