@@ -19,7 +19,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "httpx>=0.24.0",
-    "polarsteps-api @ file:///Volumes/workplace/polarsteps-api",
+    "polarsteps-api @ git+https://github.com/remuzel/polarsteps-api",
     "ruff>=0.12.0",
     "black>=25.1.0",
     "pytest>=8.4.1",
