@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "Remi Uzel"}]
 keywords = ["mcp", "polarsteps", "llm", "travel", "api"]
-license = {text = "MIT"}
+license = {file = "LICENSE.md"}
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -21,7 +21,6 @@ dependencies = [
     "httpx>=0.24.0",
     "polarsteps-api @ file:///Volumes/workplace/polarsteps-api",
     "ruff>=0.12.0",
-    "pre-commit>=4.2.0",
     "black>=25.1.0",
     "pytest>=8.4.1",
     "rapidfuzz>=3.13.0",
