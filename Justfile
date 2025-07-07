@@ -13,14 +13,14 @@ setup:
 # Lint code
 lint:
     @echo "🔍 Linting code..."
-    uv run ruff check --fix --unsafe-fixes src tests
-    uv run ruff format
+    .venv/bin/ruff check --fix --unsafe-fixes src tests
+    .venv/bin/ruff format
     @echo "✅ Lint complete!"
 
 # Run tests
 test:
     @echo "🧪 Running tests..."
-    uv run pytest tests/ -v --cov=src/polarsteps_mcp --cov-report=term-missing --cov-report=html
+    .venv/bin/pytest tests/ -v --cov=src/polarsteps_mcp --cov-report=term-missing --cov-report=html
     @echo "✅ Tests complete!"
 
 # Test MCP server with inspector
@@ -31,7 +31,7 @@ test-mcp:
 # Run the MCP server directly
 run:
     @echo "🚀 Running MCP server..."
-    uv run polarsteps-mcp
+    .venv/bin/polarsteps-mcp
 
 # Clean up generated files
 clean:
