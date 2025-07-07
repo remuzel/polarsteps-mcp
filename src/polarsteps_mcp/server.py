@@ -4,18 +4,20 @@ from mcp.types import TextContent, Tool
 from polarsteps_api import PolarstepsClient
 
 from polarsteps_mcp.tools import (
-    GetTravelStats,
     GetTripInput,
     GetTripLogInput,
     GetTripsInput,
-    GetUserInput,
+    GetUserProfile,
+    GetUserSocial,
+    GetUserStats,
     PolarstepsTool,
     SearchTripsInput,
-    get_travel_stats,
     get_trip,
     get_trip_log,
     get_trips,
-    get_user,
+    get_user_profile,
+    get_user_social,
+    get_user_stats,
     search_trips,
 )
 
@@ -39,13 +41,17 @@ async def serve() -> None:
     @server.call_tool()
     async def call_tool(name: str, args: dict) -> list[TextContent]:
         match name:
-            case PolarstepsTool.USER:
-                input = GetUserInput(**args)
-                return get_user(client, input)
+            case PolarstepsTool.USER_PROFILE:
+                input = GetUserProfile(**args)
+                return get_user_profile(client, input)
 
-            case PolarstepsTool.TRAVEL_STATS:
-                input = GetTravelStats(**args)
-                return get_travel_stats(client, input)
+            case PolarstepsTool.USER_SOCIAL:
+                input = GetUserSocial(**args)
+                return get_user_social(client, input)
+
+            case PolarstepsTool.USER_STATS:
+                input = GetUserStats(**args)
+                return get_user_stats(client, input)
 
             case PolarstepsTool.TRIP:
                 input = GetTripInput(**args)

@@ -1,10 +1,9 @@
 from unittest.mock import Mock
 
-import pydantic_core
 import pytest
 from mcp.types import TextContent
 from polarsteps_api import PolarstepsClient
-from polarsteps_api.models import Trip, User
+from polarsteps_api.models import TravelTrackerDevice, Trip, User
 
 from polarsteps_mcp.utils import _get_trip, _get_user, single_text_content
 
@@ -12,7 +11,17 @@ from polarsteps_mcp.utils import _get_trip, _get_user, single_text_content
 class TestSingleTextContent:
     """Test cases for the single_text_content utility function."""
 
-    @pytest.mark.parametrize("text", ["", "Test Message", "Multi\nLine"])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "",
+            "Test Message",
+            "Multi\nLine",
+            {"Hello": "World"},
+            TravelTrackerDevice(id=-1, uuid="123"),
+            None,
+        ],
+    )
     def test_valid_text(self, text):
         # Act
         result = single_text_content(text)
@@ -21,12 +30,7 @@ class TestSingleTextContent:
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
         assert result[0].type == "text"
-        assert result[0].text == text
-
-    def test_none_text(self):
-        # Act & Assert
-        with pytest.raises(pydantic_core._pydantic_core.ValidationError):
-            single_text_content(None)  # type: ignore
+        assert len(result[0].text) > 0 or text == ""
 
 
 class TestGetUser:

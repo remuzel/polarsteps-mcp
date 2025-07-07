@@ -26,7 +26,7 @@ test:
 # Test MCP server with inspector
 test-mcp:
     @echo "🔍 Testing MCP server with inspector..."
-    npx @modelcontextprotocol/inspector uv run polarsteps-mcp
+    npx @modelcontextprotocol/inspector .venv/bin/polarsteps-mcp
 
 # Run the MCP server directly
 run:

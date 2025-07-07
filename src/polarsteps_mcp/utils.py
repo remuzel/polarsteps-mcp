@@ -1,12 +1,21 @@
+import json
 from typing import Any, List, Optional, Tuple
 
 from mcp.types import TextContent
 from polarsteps_api import PolarstepsClient
 from polarsteps_api.models import Trip, User
+from pydantic import BaseModel
 from rapidfuzz import fuzz, process
 
 
-def single_text_content(text: str) -> list[TextContent]:
+def single_text_content(input: str | dict[Any, Any] | BaseModel) -> list[TextContent]:
+    match input:
+        case BaseModel():
+            text = input.model_dump_json(exclude_none=True)
+        case dict():
+            text = json.dumps(input)
+        case _:
+            text = str(input)
     return [TextContent(type="text", text=text)]
 
 

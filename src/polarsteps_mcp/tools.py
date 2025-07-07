@@ -15,37 +15,57 @@ from polarsteps_mcp.utils import (
 
 
 # For each tool you're going to use, define the interaction model (what parameters are required, their description, ...)
-class GetUserInput(BaseModel):
+class GetUserProfile(BaseModel):
     username: str = Field(
         ...,
-        description="The Polarsteps username (without @ symbol) to fetch profile information for",
+        description="The username of the Polarstep user to look for.",
     )
 
 
-def get_user(
-    polarsteps_client: PolarstepsClient, input: GetUserInput
+def get_user_profile(
+    polarsteps_client: PolarstepsClient, input: GetUserProfile
 ) -> list[TextContent]:
     user = _get_user(polarsteps_client, input.username)
     if user.id == -1:
         return single_text_content(
             f"User not found: No Polarsteps user exists with username={input.username}. Please verify the username is correct and the user's profile is public."
         )
-    return single_text_content(json.dumps(user.to_summary()))
+    return single_text_content(user.to_profile())
 
 
-class GetTravelStats(BaseModel):
+class GetUserSocial(BaseModel):
     username: str = Field(
         ...,
-        description="The Polarsteps username to retrieve travel statistics and metrics for",
+        description="The username of the Polarstep user to look for.",
     )
 
 
-def get_travel_stats(
-    polarsteps_client: PolarstepsClient, input: GetTravelStats
+def get_user_social(
+    polarsteps_client: PolarstepsClient, input: GetUserSocial
+) -> list[TextContent]:
+    user = _get_user(polarsteps_client, input.username)
+    if user.id == -1:
+        return single_text_content(
+            f"User not found: No Polarsteps user exists with username={input.username}. Please verify the username is correct and the user's profile is public."
+        )
+    return single_text_content(user.to_social())
+
+
+class GetUserStats(BaseModel):
+    username: str = Field(
+        ...,
+        description="The username of the Polarstep user to look for.",
+    )
+
+
+def get_user_stats(
+    polarsteps_client: PolarstepsClient, input: GetUserStats
 ) -> list[TextContent]:
     user = _get_user(polarsteps_client, input.username)
     if user.stats is None:
-        return single_text_content(f"User @{input.username} does not have travel stats")
+        return single_text_content(
+            f"No travel stats found for username={input.username}"
+        )
     return single_text_content(user.stats.model_dump_json())
 
 
@@ -121,7 +141,9 @@ def get_trips(
 ) -> list[TextContent]:
     user = _get_user(polarsteps_client, input.username)
     if user.alltrips is None:
-        return single_text_content(f"User @{input.username} does not have any trips!")
+        return single_text_content(
+            f"No trips found for user with username={input.username}"
+        )
     return [
         TextContent(type="text", text=json.dumps(trip.to_summary()))
         for trip in user.alltrips[: input.n_trips]
@@ -142,10 +164,15 @@ class SearchTripsInput(BaseModel):
 def search_trips(polarsteps_client: PolarstepsClient, input: SearchTripsInput):
     user = _get_user(polarsteps_client, input.username)
     if user.alltrips is None:
-        return single_text_content(f"User @{input.username} does not have any trips!")
+        return single_text_content(
+            f"No trips found for user with username={input.username}"
+        )
 
     matched_trips = fuzzy_search_items(
         user.alltrips, input.name_query, field_name="name"
+    )
+    matched_trips.extend(
+        fuzzy_search_items(user.alltrips, input.name_query, field_name="summary")
     )
 
     return [
@@ -172,15 +199,20 @@ class PolarstepsTool(str, Enum):
         """Get the JSON schema for this tool's input model."""
         return self._schema  # type: ignore
 
-    USER = (
-        "get_user",
-        "Fetch detailed user profile information from Polarsteps including basic stats, profile details, and account information. Use this to get overview information about a traveler, their profile setup, and basic travel metrics before diving into specific trips or detailed statistics.",
-        GetUserInput,
+    USER_PROFILE = (
+        "get_user_profile",
+        "Get a users' profile overview including their living location and their number of countries visited & trips.",
+        GetUserProfile,
     )
-    TRAVEL_STATS = (
-        "get_travel_stats",
-        "Retrieve comprehensive travel statistics and metrics for a Polarsteps user, including countries visited, total distance traveled, trip counts, and detailed travel analytics. Perfect for getting a complete picture of someone's travel history and achievements.",
-        GetTravelStats,
+    USER_SOCIAL = (
+        "get_user_social",
+        "Get a users' social information including: followers, followees, their count and if they're considered popular.",
+        GetUserSocial,
+    )
+    USER_STATS = (
+        "get_user_stats",
+        "Get available travel statistics and metrics for a Polarsteps user, including countries visited, total distance traveled, trip counts, and detailed travel analytics. Perfect for getting a complete picture of someone's travel history and achievements.",
+        GetUserStats,
     )
     TRIP = (
         "get_trip",

@@ -6,18 +6,20 @@ from polarsteps_api import PolarstepsClient
 from polarsteps_api.models import Location, Stats, Step, Trip, User
 
 from polarsteps_mcp.tools import (
-    GetTravelStats,
     GetTripInput,
     GetTripLogInput,
     GetTripsInput,
-    GetUserInput,
+    GetUserProfile,
+    GetUserSocial,
+    GetUserStats,
     PolarstepsTool,
     SearchTripsInput,
-    get_travel_stats,
     get_trip,
     get_trip_log,
     get_trips,
-    get_user,
+    get_user_profile,
+    get_user_social,
+    get_user_stats,
     search_trips,
 )
 
@@ -132,11 +134,11 @@ def not_found_trip():
 class TestGetUser:
     """Test cases for the get_user function."""
 
-    def test_get_user_success(self, mock_polarsteps_client, sample_user):
+    def test_get_user_profile_success(self, mock_polarsteps_client, sample_user):
         """Test successful user retrieval."""
         with patch("polarsteps_mcp.tools._get_user", return_value=sample_user):
-            input_data = GetUserInput(username="testuser")
-            result = get_user(mock_polarsteps_client, input_data)
+            input_data = GetUserProfile(username="testuser")
+            result = get_user_profile(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
@@ -148,11 +150,29 @@ class TestGetUser:
             assert user_data["last_name"] == "Doe"
             assert user_data["username"] == "testuser"
 
+    def test_get_user_social_success(self, mock_polarsteps_client, sample_user):
+        """Test successful user retrieval."""
+        with patch("polarsteps_mcp.tools._get_user", return_value=sample_user):
+            input_data = GetUserSocial(username="testuser")
+            result = get_user_social(mock_polarsteps_client, input_data)
+
+            assert len(result) == 1
+            assert isinstance(result[0], TextContent)
+            # The result should be JSON string containing user social
+            import json
+
+            social_data = json.loads(result[0].text)
+            assert social_data["followers"] == ["follower1"]
+            assert social_data["followers_count"] == 1
+            assert social_data["followees"] == ["followee1"]
+            assert social_data["followees_count"] == 1
+            assert social_data["is_popular"] is False
+
     def test_get_user_not_found(self, mock_polarsteps_client, not_found_user):
         """Test user not found scenario."""
         with patch("polarsteps_mcp.tools._get_user", return_value=not_found_user):
-            input_data = GetUserInput(username="nonexistent")
-            result = get_user(mock_polarsteps_client, input_data)
+            input_data = GetUserProfile(username="nonexistent")
+            result = get_user_profile(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
@@ -166,8 +186,8 @@ class TestGetUser:
         ["validuser", "user_with_underscore", "user123", "a" * 50],  # long username
     )
     def test_get_user_input_validation(self, username):
-        """Test GetUserInput validation with various usernames."""
-        input_data = GetUserInput(username=username)
+        """Test GetUserProfile validation with various usernames."""
+        input_data = GetUserProfile(username=username)
         assert input_data.username == username
 
 
@@ -177,8 +197,8 @@ class TestGetUserStats:
     def test_get_user_stats_success(self, mock_polarsteps_client, sample_user):
         """Test successful user stats retrieval."""
         with patch("polarsteps_mcp.tools._get_user", return_value=sample_user):
-            input_data = GetTravelStats(username="testuser")
-            result = get_travel_stats(mock_polarsteps_client, input_data)
+            input_data = GetUserStats(username="testuser")
+            result = get_user_stats(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
@@ -199,11 +219,11 @@ class TestGetUserStats:
         )
 
         with patch("polarsteps_mcp.tools._get_user", return_value=user_without_stats):
-            input_data = GetTravelStats(username="testuser")
-            result = get_travel_stats(mock_polarsteps_client, input_data)
+            input_data = GetUserStats(username="testuser")
+            result = get_user_stats(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
-            assert "User @testuser does not have travel stats" in result[0].text
+            assert "No travel stats found for username=testuser" in result[0].text
 
 
 class TestGetUserTrips:
@@ -275,7 +295,7 @@ class TestGetUserTrips:
             result = get_trips(mock_polarsteps_client, input_data)
 
             assert len(result) == 1
-            assert "User @testuser does not have any trips!" in result[0].text
+            assert "No trips found for user with username=testuser" in result[0].text
 
     @pytest.mark.parametrize("max_trips", [1, 5, 10, 50, 100])
     def test_get_user_trips_max_trips_validation(self, max_trips):
@@ -657,7 +677,9 @@ class TestGetTripLog:
 
             assert len(result) == 1
             assert isinstance(result[0], TextContent)
-            assert "Trip with ID 1000001 does not have any logged steps" in result[0].text
+            assert (
+                "Trip with ID 1000001 does not have any logged steps" in result[0].text
+            )
 
     @pytest.mark.parametrize("trip_id", [1000000, 1234567, 9999999])
     def test_get_trip_log_input_validation_valid(self, trip_id):
