@@ -66,7 +66,7 @@ def get_user_stats(
         return single_text_content(
             f"No travel stats found for username={input.username}"
         )
-    return single_text_content(user.stats.model_dump_json())
+    return single_text_content(user.stats)
 
 
 class GetTripInput(BaseModel):
@@ -88,7 +88,7 @@ def get_trip(
     trip = _get_trip(polarsteps_client, input.trip_id)
     if trip.id == -1:
         return single_text_content(f"Could not find trip with ID: {input.trip_id}")
-    return single_text_content(json.dumps(trip.to_detailed_summary(input.n_steps)))
+    return single_text_content(trip.to_detailed_summary(input.n_steps))
 
 
 class GetTripLogInput(BaseModel):
@@ -122,7 +122,7 @@ def get_trip_log(
         for step in trip.all_steps
         if step.name is not None
     ]
-    return single_text_content(json.dumps(trip_log))
+    return [TextContent(type="text", text=json.dumps(trip)) for trip in trip_log]
 
 
 class GetTripsInput(BaseModel):
@@ -176,7 +176,7 @@ def search_trips(polarsteps_client: PolarstepsClient, input: SearchTripsInput):
     )
 
     return [
-        TextContent(type="text", text=trip.model_dump_json(include={"id", "name"}))
+        TextContent(type="text", text=trip.model_dump_json(include={"id", "name"}, exclude_none=True))
         for trip, _ in matched_trips
     ]
 

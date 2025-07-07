@@ -500,29 +500,28 @@ class TestGetTripLog:
             input_data = GetTripLogInput(trip_id=1000001)
             result = get_trip_log(mock_polarsteps_client, input_data)
 
-            assert len(result) == 1
+            assert len(result) == 2
             assert isinstance(result[0], TextContent)
 
             # Parse the JSON result
             import json
 
-            trip_log = json.loads(result[0].text)
-
-            assert len(trip_log) == 2
+            trip_log_1 = json.loads(result[0].text)
+            trip_log_2 = json.loads(result[1].text)
 
             # Check first step
-            assert trip_log[0]["timestamp"] == 1672531200
-            assert trip_log[0]["title"] == "Paris Visit"
+            assert trip_log_1["timestamp"] == 1672531200
+            assert trip_log_1["title"] == "Paris Visit"
             assert (
-                trip_log[0]["description"] == "Beautiful city with amazing architecture"
+                trip_log_1["description"] == "Beautiful city with amazing architecture"
             )
-            assert trip_log[0]["location"] == "Paris (FR)"
+            assert trip_log_1["location"] == "Paris (FR)"
 
             # Check second step
-            assert trip_log[1]["timestamp"] == 1672617600
-            assert trip_log[1]["title"] == "Rome Visit"
-            assert trip_log[1]["description"] == "Historic city with incredible history"
-            assert trip_log[1]["location"] == "Rome (IT)"
+            assert trip_log_2["timestamp"] == 1672617600
+            assert trip_log_2["title"] == "Rome Visit"
+            assert trip_log_2["description"] == "Historic city with incredible history"
+            assert trip_log_2["location"] == "Rome (IT)"
 
     def test_get_trip_log_with_steps_without_names(self, mock_polarsteps_client):
         """Test trip log with some steps that don't have names (should be filtered out)."""
@@ -568,18 +567,18 @@ class TestGetTripLog:
             input_data = GetTripLogInput(trip_id=1000001)
             result = get_trip_log(mock_polarsteps_client, input_data)
 
-            assert len(result) == 1
+            assert len(result) == 2
             assert isinstance(result[0], TextContent)
 
             # Parse the JSON result
             import json
 
-            trip_log = json.loads(result[0].text)
+            trip_log_1 = json.loads(result[0].text)
+            trip_log_2 = json.loads(result[1].text)
 
             # Should only have 2 steps (the ones with names)
-            assert len(trip_log) == 2
-            assert trip_log[0]["title"] == "Named Step"
-            assert trip_log[1]["title"] == "Another Named Step"
+            assert trip_log_1["title"] == "Named Step"
+            assert trip_log_2["title"] == "Another Named Step"
 
     def test_get_trip_log_with_no_location(self, mock_polarsteps_client):
         """Test trip log with steps that have no location."""
@@ -614,9 +613,9 @@ class TestGetTripLog:
 
             trip_log = json.loads(result[0].text)
 
-            assert len(trip_log) == 1
-            assert trip_log[0]["title"] == "Mystery Step"
-            assert trip_log[0]["location"] == "Unknown"
+            assert len(trip_log) == 4
+            assert trip_log["title"] == "Mystery Step"
+            assert trip_log["location"] == "Unknown"
 
     def test_get_trip_log_empty_steps(self, mock_polarsteps_client):
         """Test trip log with no steps."""
@@ -637,15 +636,7 @@ class TestGetTripLog:
             input_data = GetTripLogInput(trip_id=1000001)
             result = get_trip_log(mock_polarsteps_client, input_data)
 
-            assert len(result) == 1
-            assert isinstance(result[0], TextContent)
-
-            # Parse the JSON result
-            import json
-
-            trip_log = json.loads(result[0].text)
-
-            assert trip_log == []
+            assert len(result) == 0
 
     def test_get_trip_log_trip_not_found(self, mock_polarsteps_client, not_found_trip):
         """Test trip log when trip is not found."""

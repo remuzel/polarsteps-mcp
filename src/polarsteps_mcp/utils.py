@@ -8,11 +8,14 @@ from pydantic import BaseModel
 from rapidfuzz import fuzz, process
 
 
-def single_text_content(input: str | dict[Any, Any] | BaseModel) -> list[TextContent]:
+def single_text_content(input: str | list[Any] | dict[Any, Any] | BaseModel) -> list[TextContent]:
     match input:
         case BaseModel():
             text = input.model_dump_json(exclude_none=True)
         case dict():
+            filtered_input = {k: v for k, v in input.items() if v is not None}
+            text = json.dumps(filtered_input)
+        case list():
             text = json.dumps(input)
         case _:
             text = str(input)
