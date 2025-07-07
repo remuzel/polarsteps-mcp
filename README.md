@@ -1,9 +1,19 @@
 # Polarsteps MCP Server
+[![smithery badge](https://smithery.ai/badge/@remuzel/polarsteps-mcp)](https://smithery.ai/server/@remuzel/polarsteps-mcp)
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that provides tools for interacting with the Polarsteps API. This enables Claude and other MCP clients to fetch travel data, trip information, and user profiles from Polarsteps.
 
 ## Installation
 
+### Installing via Smithery
+
+To install polarsteps-mcp for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@remuzel/polarsteps-mcp):
+
+```bash
+npx -y @smithery/cli install @remuzel/polarsteps-mcp --client claude
+```
+
+### Manual Installation
 ```bash
 just setup
 # or without just
