@@ -28,7 +28,13 @@ Set your Polarsteps remember token as an environment variable:
 export POLARSTEPS_REMEMBER_TOKEN="your_remember_token_here"
 ```
 
-Get your token from browser cookies when logged into Polarsteps.
+Get your token from browser cookies when logged into Polarsteps:
+1. Go to https://www.polarsteps.com/
+2. Make sure you're logged in
+3. Open your browsers' Dev Tools storage:
+   * Firefox: Shift+F9
+   * Chrome: F12 -> Application tab
+4. Find your `remember_token` cookie for https://www.polarsteps.com
 
 ## Usage
 
