@@ -1,6 +1,5 @@
 import logging
 import sys
-from pathlib import Path
 
 import click
 
@@ -8,7 +7,6 @@ from .server import serve
 
 
 @click.command()
-@click.option("--repository", "-r", type=Path, help="PolarStep path")
 @click.option("-v", "--verbose", count=True)
 def main(verbose: bool) -> None:
     """MCP PolarStep Server - PolarStep functionality for MCP"""
