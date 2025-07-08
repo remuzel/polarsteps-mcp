@@ -1,8 +1,11 @@
+> [!WARNING]\
+> This MCP server uses the `polarsteps-api` package to access Polarsteps data through undocumented APIs. **Important**: Please read the associated [legal disclaimer and terms of use](https://github.com/remuzel/polarsteps-api#terms-of-use) before using this tool. By using this MCP server, you agree to the terms outlined in the API package and acknowledge the associated risks.
+
 # Polarsteps MCP Server
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that enables Claude and other AI assistants to access Polarsteps travel data. Query user profiles, trip details, travel statistics, and search through travel histories with natural language.
 
-[![smithery badge](https://smithery.ai/badge/@remuzel/polarsteps-mcp)](https://smithery.ai/server/@remuzel/polarsteps-mcp)
+![MCP Server Badge](https://badge.mcpx.dev?type=server 'MCP Server') [![Smithery Badge](https://smithery.ai/badge/@remuzel/polarsteps-mcp)](https://smithery.ai/server/@remuzel/polarsteps-mcp)
 
 
 ## Features
@@ -113,11 +116,3 @@ just test-mcp
 ```bash
 just lint
 ```
-
-## ⚠️ Legal Notice
-
-This MCP server uses the [`polarsteps-api`](https://github.com/remuzel/polarsteps-api) package to access Polarsteps data through undocumented APIs.
-
-**Important**: Please read the full legal disclaimer and terms of use in the [polarsteps-api package](https://github.com/remuzel/polarsteps-api#%EF%B8%8F-important-disclaimers) before using this tool.
-
-By using this MCP server, you agree to the terms outlined in the API package and acknowledge the associated risks.
